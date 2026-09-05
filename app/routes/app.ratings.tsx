@@ -67,6 +67,39 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "Invalid product ID or rating (must be 1-5)." };
     }
 
+    // Upsert the admin rating into local DB first
+    const numericId = productId.replace("gid://shopify/Product/", "");
+    await db.rating.upsert({
+      where: {
+        shop_productId_customerIdentifier: {
+          shop: session.shop,
+          productId: numericId,
+          customerIdentifier: "admin",
+        },
+      },
+      create: {
+        shop: session.shop,
+        productId: numericId,
+        customerIdentifier: "admin",
+        rating: newRating,
+      },
+      update: {
+        rating: newRating,
+      },
+    });
+
+    // Recalculate aggregate from all ratings in the DB
+    const ratings = await db.rating.findMany({
+      where: { shop: session.shop, productId: numericId },
+      select: { rating: true },
+    });
+
+    const ratingCount = ratings.length;
+    const avgRating =
+      ratingCount > 0
+        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratingCount
+        : newRating;
+
     const response = await admin.graphql(
       `#graphql
         mutation setProductRating($metafields: [MetafieldsSetInput!]!) {
@@ -91,14 +124,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               key: "avg_rating",
               ownerId: productId,
               type: "number_decimal",
-              value: newRating.toFixed(1),
+              value: avgRating.toFixed(1),
             },
             {
               namespace: "$app",
               key: "rating_count",
               ownerId: productId,
               type: "number_integer",
-              value: "1",
+              value: String(ratingCount),
             },
           ],
         },
@@ -111,27 +144,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (userErrors && userErrors.length > 0) {
       return { error: userErrors[0].message };
     }
-
-    // Also upsert into local DB so it shows in records
-    const numericId = productId.replace("gid://shopify/Product/", "");
-    await db.rating.upsert({
-      where: {
-        shop_productId_customerIdentifier: {
-          shop: session.shop,
-          productId: numericId,
-          customerIdentifier: "admin",
-        },
-      },
-      create: {
-        shop: session.shop,
-        productId: numericId,
-        customerIdentifier: "admin",
-        rating: newRating,
-      },
-      update: {
-        rating: newRating,
-      },
-    });
 
     return { success: true };
   }

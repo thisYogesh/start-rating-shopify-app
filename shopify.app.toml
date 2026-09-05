@@ -28,7 +28,7 @@ description = "The total number of ratings for this product"
   storefront = "public_read"
 
 [app_proxy]
-url = "/proxy"
+url = "https://example.com/proxy"
 prefix = "apps"
 subpath = "star-rating"
 

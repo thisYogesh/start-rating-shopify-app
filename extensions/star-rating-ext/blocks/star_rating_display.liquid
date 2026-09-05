@@ -4,14 +4,17 @@
 {% assign text_color = block.settings.text_color %}
 {% assign show_count = block.settings.show_count %}
 {% assign star_size = block.settings.star_size %}
+{% assign avg_floor = avg | floor %}
+{% assign avg_ceil = avg | ceil %}
+{% assign avg_rounded = avg | round: 1 %}
 
 {% if avg > 0 %}
   <div class="star-rating-display" style="--star-color: {{ star_color }}; --text-color: {{ text_color }}; --star-size: {{ star_size }}px;">
     <div class="star-rating-display__stars">
       {% for i in (1..5) %}
-        {% if i <= avg %}
+        {% if i <= avg_floor %}
           <span class="star star--filled">★</span>
-        {% elsif i == avg | ceil and avg != avg | floor %}
+        {% elsif i == avg_ceil and avg_floor != avg_ceil %}
           <span class="star star--half">★</span>
         {% else %}
           <span class="star star--empty">★</span>
@@ -20,7 +23,7 @@
     </div>
     {% if show_count %}
       <span class="star-rating-count">
-        {{ avg | round: 1 }} ({{ count }} {{ count | pluralize: 'rating', 'ratings' }})
+        {{ avg_rounded }} ({{ count }} {{ count | pluralize: 'rating', 'ratings' }})
       </span>
     {% endif %}
   </div>
