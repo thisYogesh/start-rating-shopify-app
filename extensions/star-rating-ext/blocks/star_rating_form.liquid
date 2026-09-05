@@ -1,0 +1,62 @@
+{% assign star_color = block.settings.star_color %}
+{% assign submit_text = block.settings.submit_text %}
+{% assign heading_text = block.settings.heading_text %}
+{% assign product_id = product.id | split: '/' | last %}
+
+<div class="star-rating-form" data-proxy-url="/apps/star-rating" style="--star-color: {{ star_color }};">
+  <h3 class="star-rating-form__heading">{{ heading_text }}</h3>
+
+  <div class="star-rating-form__stars" data-rating="0">
+    {% for i in (1..5) %}
+      <span class="star star--interactive star--empty" data-value="{{ i }}" role="button" tabindex="0" aria-label="Rate {{ i }} star{{ i | pluralize: '', 's' }}">★</span>
+    {% endfor %}
+  </div>
+
+  <input type="hidden" name="productId" value="{{ product_id }}">
+  <input type="hidden" name="rating" value="">
+
+  {% if customer %}
+    <input type="hidden" name="customerIdentifier" value="{{ customer.id }}">
+  {% else %}
+    <div class="star-rating-form__email">
+      <label for="star-rating-email-{{ block.id }}">Your email</label>
+      <input type="email" id="star-rating-email-{{ block.id }}" name="customerIdentifier" placeholder="Enter your email" required>
+    </div>
+  {% endif %}
+
+  <button type="button" class="star-rating-form__submit" disabled>{{ submit_text }}</button>
+
+  <div class="star-rating-message" role="status" aria-live="polite"></div>
+</div>
+
+{% schema %}
+{
+  "name": "Star Rating Form",
+  "target": "section",
+  "stylesheet": "star-rating.css",
+  "javascript": "star-rating.js",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star Color",
+      "default": "#FFD700"
+    },
+    {
+      "type": "text",
+      "id": "submit_text",
+      "label": "Submit Button Text",
+      "default": "Submit Rating"
+    },
+    {
+      "type": "text",
+      "id": "heading_text",
+      "label": "Heading Text",
+      "default": "Rate this product"
+    }
+  ]
+}
+{% endschema %}

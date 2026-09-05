@@ -1,0 +1,13 @@
+{
+  "star_rating": {
+    "display": {
+      "no_ratings": "No ratings yet"
+    },
+    "form": {
+      "heading": "Rate this product",
+      "submit": "Submit Rating",
+      "success": "Thank you for your rating!",
+      "error": "Failed to submit rating. Please try again."
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{% assign avg = product.metafields.app.avg_rating.value | plus: 0.0 %}
+{% assign count = product.metafields.app.rating_count.value | plus: 0 %}
+{% assign star_color = block.settings.star_color %}
+{% assign text_color = block.settings.text_color %}
+{% assign show_count = block.settings.show_count %}
+{% assign star_size = block.settings.star_size %}
+
+{% if avg > 0 %}
+  <div class="star-rating-display" style="--star-color: {{ star_color }}; --text-color: {{ text_color }}; --star-size: {{ star_size }}px;">
+    <div class="star-rating-display__stars">
+      {% for i in (1..5) %}
+        {% if i <= avg %}
+          <span class="star star--filled">★</span>
+        {% elsif i == avg | ceil and avg != avg | floor %}
+          <span class="star star--half">★</span>
+        {% else %}
+          <span class="star star--empty">★</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% if show_count %}
+      <span class="star-rating-count">
+        {{ avg | round: 1 }} ({{ count }} {{ count | pluralize: 'rating', 'ratings' }})
+      </span>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="star-rating-display" style="--star-color: {{ star_color }}; --text-color: {{ text_color }}; --star-size: {{ star_size }}px;">
+    <div class="star-rating-display__stars">
+      {% for i in (1..5) %}
+        <span class="star star--empty">★</span>
+      {% endfor %}
+    </div>
+    {% if show_count %}
+      <span class="star-rating-count">No ratings yet</span>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Star Rating Display",
+  "target": "section",
+  "stylesheet": "star-rating.css",
+  "settings": [
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star Color",
+      "default": "#FFD700"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_count",
+      "label": "Show rating count",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "star_size",
+      "label": "Star Size (px)",
+      "min": 12,
+      "max": 32,
+      "step": 1,
+      "default": 20
+    }
+  ]
+}
+{% endschema %}

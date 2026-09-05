@@ -1,0 +1,55 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "277647656486eb57390aca68d30e1eb4"
+application_url = "https://example.com"
+embedded = true
+name = "star-rating"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products"
+
+[product.metafields.app.avg_rating]
+type = "number_decimal"
+name = "Average Star Rating"
+description = "The average star rating for this product"
+
+  [product.metafields.app.avg_rating.access]
+  admin = "merchant_read_write"
+  storefront = "public_read"
+
+[product.metafields.app.rating_count]
+type = "number_integer"
+name = "Rating Count"
+description = "The total number of ratings for this product"
+
+  [product.metafields.app.rating_count.access]
+  admin = "merchant_read_write"
+  storefront = "public_read"
+
+[app_proxy]
+url = "/proxy"
+prefix = "apps"
+subpath = "star-rating"
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "/webhooks/compliance"
+
+[auth]
+redirect_urls = [ "https://example.com/api/auth" ]
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true

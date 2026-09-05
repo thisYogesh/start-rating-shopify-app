@@ -1,0 +1,145 @@
+/* Star Rating Display */
+.star-rating-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.star-rating-display__stars {
+  display: inline-flex;
+  gap: 1px;
+}
+
+/* Star Rating Form */
+.star-rating-form {
+  margin: 16px 0;
+}
+
+.star-rating-form__heading {
+  margin: 0 0 12px;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.star-rating-form__stars {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.star-rating-form__email {
+  margin-bottom: 12px;
+}
+
+.star-rating-form__email label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.star-rating-form__email input {
+  width: 100%;
+  max-width: 300px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95em;
+}
+
+.star-rating-form__email input:focus {
+  outline: none;
+  border-color: #333;
+  box-shadow: 0 0 0 1px #333;
+}
+
+/* Shared Star Styles */
+.star {
+  font-size: var(--star-size, 20px);
+  line-height: 1;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.star--filled {
+  color: var(--star-color, #FFD700);
+}
+
+.star--half {
+  color: var(--star-color, #FFD700);
+  opacity: 0.6;
+}
+
+.star--empty {
+  color: #ddd;
+}
+
+/* Interactive Stars (Form) */
+.star--interactive {
+  cursor: pointer;
+  font-size: 28px;
+}
+
+.star--interactive:hover,
+.star--interactive:focus-visible {
+  transform: scale(1.15);
+  outline: none;
+}
+
+.star--interactive.star--hovered {
+  color: var(--star-color, #FFD700);
+}
+
+.star--interactive.star--selected {
+  color: var(--star-color, #FFD700);
+}
+
+/* Rating Count Text */
+.star-rating-count {
+  font-size: 0.9em;
+  color: var(--text-color, #333);
+}
+
+/* Submit Button */
+.star-rating-form__submit {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.star-rating-form__submit:hover:not(:disabled) {
+  background: #555;
+}
+
+.star-rating-form__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.star-rating-form__submit--loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Message Feedback */
+.star-rating-message {
+  margin-top: 8px;
+  font-size: 0.9em;
+  min-height: 1.2em;
+}
+
+.star-rating-message--success {
+  color: #2e7d32;
+}
+
+.star-rating-message--error {
+  color: #c62828;
+}
