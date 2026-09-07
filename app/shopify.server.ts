@@ -4,8 +4,14 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-react-router/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
-import prisma from "./db.server";
+import { KVSessionStorage } from "@shopify/shopify-app-session-storage-kv";
+
+// KVSessionStorage can be created without a namespace — the Worker entry
+// (workers/app.ts) stashes the KV binding on globalThis.__env before the
+// first request triggers module loading, so it's available here.
+const kvSessionStorage = new KVSessionStorage(
+  globalThis.__env?.SESSION_STORAGE,
+);
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -14,7 +20,7 @@ const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: kvSessionStorage,
   distribution: AppDistribution.AppStore,
   future: {
     expiringOfflineAccessTokens: true,
@@ -31,4 +37,4 @@ export const authenticate = shopify.authenticate;
 export const unauthenticated = shopify.unauthenticated;
 export const login = shopify.login;
 export const registerWebhooks = shopify.registerWebhooks;
-export const sessionStorage = shopify.sessionStorage;
+export const sessionStorage = kvSessionStorage;

@@ -8,7 +8,7 @@ import { useLoaderData, useFetcher, useRouteError } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import db from "../db.server";
+import { getDb } from "../db.server";
 
 interface ProductNode {
   id: string;
@@ -32,10 +32,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             node {
               id
               title
-              avgRating: metafield(namespace: "$app", key: "avg_rating") {
+              avgRating: metafield(namespace: "star_rating", key: "avg_rating") {
                 value
               }
-              ratingCount: metafield(namespace: "$app", key: "rating_count") {
+              ratingCount: metafield(namespace: "star_rating", key: "rating_count") {
                 value
               }
             }
@@ -67,32 +67,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "Invalid product ID or rating (must be 1-5)." };
     }
 
-    // Upsert the admin rating into local DB first
-    const numericId = productId.replace("gid://shopify/Product/", "");
-    await db.rating.upsert({
-      where: {
-        shop_productId_customerIdentifier: {
-          shop: session.shop,
-          productId: numericId,
-          customerIdentifier: "admin",
-        },
-      },
-      create: {
-        shop: session.shop,
-        productId: numericId,
-        customerIdentifier: "admin",
-        rating: newRating,
-      },
-      update: {
-        rating: newRating,
-      },
-    });
+    const db = getDb();
 
-    // Recalculate aggregate from all ratings in the DB
-    const ratings = await db.rating.findMany({
-      where: { shop: session.shop, productId: numericId },
-      select: { rating: true },
-    });
+    // Upsert the admin rating into D1
+    const numericId = productId.replace("gid://shopify/Product/", "");
+    await db
+      .prepare(
+        `INSERT INTO "Rating" ("id", "shop", "productId", "customerIdentifier", "rating", "createdAt", "updatedAt")
+         VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+         ON CONFLICT ("shop", "productId", "customerIdentifier")
+         DO UPDATE SET "rating" = excluded."rating", "updatedAt" = datetime('now')`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        session.shop,
+        numericId,
+        "admin",
+        newRating,
+      )
+      .run();
+
+    // Recalculate aggregate from all ratings in D1
+    const { results: ratings } = await db
+      .prepare(
+        'SELECT "rating" FROM "Rating" WHERE "shop" = ? AND "productId" = ?',
+      )
+      .bind(session.shop, numericId)
+      .all<{ rating: number }>();
 
     const ratingCount = ratings.length;
     const avgRating =
@@ -120,14 +121,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         variables: {
           metafields: [
             {
-              namespace: "$app",
+              namespace: "star_rating",
               key: "avg_rating",
               ownerId: productId,
               type: "number_decimal",
               value: avgRating.toFixed(1),
             },
             {
-              namespace: "$app",
+              namespace: "star_rating",
               key: "rating_count",
               ownerId: productId,
               type: "number_integer",

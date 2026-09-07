@@ -1,11 +1,13 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
-import db from "../db.server";
+import { getDb } from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { topic, shop, payload } = await authenticate.webhook(request);
 
   console.log(`Received ${topic} compliance webhook for ${shop}`);
+
+  const db = getDb();
 
   switch (topic) {
     case "CUSTOMERS_DATA_REQUEST": {
@@ -16,21 +18,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         (payload as { customer?: { id?: number } })?.customer?.id ?? "",
       );
 
-      const ratings = await db.rating.findMany({
-        where: {
-          shop,
-          OR: [
-            { customerIdentifier: customerEmail },
-            { customerIdentifier: customerId },
-          ],
-        },
-        select: {
-          productId: true,
-          rating: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      const { results: ratings } = await db
+        .prepare(
+          'SELECT "productId", "rating", "createdAt", "updatedAt" FROM "Rating" WHERE "shop" = ? AND ("customerIdentifier" = ? OR "customerIdentifier" = ?)',
+        )
+        .bind(shop, customerEmail, customerId)
+        .all();
 
       console.log(
         `Customer data request for ${shop}: found ${ratings.length} rating(s) for customer ${customerEmail || customerId}`,
@@ -47,15 +40,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         (payload as { customer?: { id?: number } })?.customer?.id ?? "",
       );
 
-      await db.rating.deleteMany({
-        where: {
-          shop,
-          OR: [
-            { customerIdentifier: customerEmail },
-            { customerIdentifier: customerId },
-          ],
-        },
-      });
+      await db
+        .prepare(
+          'DELETE FROM "Rating" WHERE "shop" = ? AND ("customerIdentifier" = ? OR "customerIdentifier" = ?)',
+        )
+        .bind(shop, customerEmail, customerId)
+        .run();
 
       console.log(
         `Deleted customer data for ${customerEmail || customerId} in shop ${shop}`,
@@ -65,9 +55,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     case "SHOP_REDACT": {
       // Delete ALL rating records for this shop
-      await db.rating.deleteMany({
-        where: { shop },
-      });
+      await db
+        .prepare('DELETE FROM "Rating" WHERE "shop" = ?')
+        .bind(shop)
+        .run();
 
       console.log(`Deleted all rating data for shop ${shop}`);
       break;

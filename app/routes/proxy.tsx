@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
-import db from "../db.server";
+import { getDb } from "../db.server";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -74,32 +74,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const shop = session.shop;
+    const db = getDb();
 
     // Upsert the rating (create or update for the same customer+product)
-    await db.rating.upsert({
-      where: {
-        shop_productId_customerIdentifier: {
-          shop,
-          productId,
-          customerIdentifier,
-        },
-      },
-      create: {
-        shop,
-        productId,
-        customerIdentifier,
-        rating,
-      },
-      update: {
-        rating,
-      },
-    });
+    await db
+      .prepare(
+        `INSERT INTO "Rating" ("id", "shop", "productId", "customerIdentifier", "rating", "createdAt", "updatedAt")
+         VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+         ON CONFLICT ("shop", "productId", "customerIdentifier")
+         DO UPDATE SET "rating" = excluded."rating", "updatedAt" = datetime('now')`,
+      )
+      .bind(crypto.randomUUID(), shop, productId, customerIdentifier, rating)
+      .run();
 
     // Recalculate aggregate for this product
-    const ratings = await db.rating.findMany({
-      where: { shop, productId },
-      select: { rating: true },
-    });
+    const { results: ratings } = await db
+      .prepare(
+        'SELECT "rating" FROM "Rating" WHERE "shop" = ? AND "productId" = ?',
+      )
+      .bind(shop, productId)
+      .all<{ rating: number }>();
 
     const count = ratings.length;
     const average =
@@ -129,14 +123,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         variables: {
           metafields: [
             {
-              namespace: "$app",
+              namespace: "star_rating",
               key: "avg_rating",
               ownerId,
               type: "number_decimal",
               value: average.toFixed(1),
             },
             {
-              namespace: "$app",
+              namespace: "star_rating",
               key: "rating_count",
               ownerId,
               type: "number_integer",

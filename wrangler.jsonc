@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "star-rating",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": "./build/client"
+  },
+
+  // Non-secret env vars (set real values after first deploy)
+  "vars": {
+    "SCOPES": "write_products"
+  },
+
+  // D1 — rating data
+  // Create with: npx wrangler d1 create star-rating-db
+  // Then paste the database_id below
+  "d1_databases": [
+    {
+      "binding": "STAR_RATING_DB",
+      "database_name": "star-rating-db",
+      "database_id": "<PASTE_D1_DATABASE_ID_HERE>",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // KV — session storage
+  // Create with: npx wrangler kv namespace create SESSION_STORAGE
+  // Then paste the id below
+  "kv_namespaces": [
+    {
+      "binding": "SESSION_STORAGE",
+      "id": "<PASTE_KV_NAMESPACE_ID_HERE>"
+    }
+  ]
+}
