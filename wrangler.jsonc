@@ -21,7 +21,7 @@
     {
       "binding": "STAR_RATING_DB",
       "database_name": "star-rating-db",
-      "database_id": "<PASTE_D1_DATABASE_ID_HERE>",
+      "database_id": "a814ac64-a5d3-4cb9-9965-234968dfadd7",
       "migrations_dir": "migrations"
     }
   ],
@@ -32,7 +32,7 @@
   "kv_namespaces": [
     {
       "binding": "SESSION_STORAGE",
-      "id": "<PASTE_KV_NAMESPACE_ID_HERE>"
+      "id": "d8af390ff2da40d090d8d59a9cb15526"
     }
   ]
 }
