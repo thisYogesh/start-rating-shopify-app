@@ -3,44 +3,55 @@
 {% assign show_count = block.settings.show_count %}
 {% assign star_size = block.settings.star_size %}
 
-<!-- DEBUG star-rating: product_id={{ product.id | default: "nil" }} avg_raw={{ product.metafields.star_rating.avg_rating.value | default: "nil" }} count_raw={{ product.metafields.star_rating.rating_count.value | default: "nil" }} -->
-{% assign avg = product.metafields.star_rating.avg_rating.value | plus: 0.0 %}
-{% assign count = product.metafields.star_rating.rating_count.value | plus: 0 %}
-{% assign avg_floor = avg | floor %}
-{% assign avg_ceil = avg | ceil %}
-{% assign avg_rounded = avg | round: 1 %}
-
-{% if avg > 0 %}
-  <div class="star-rating-display" style="--star-color: {{ star_color }}; --text-color: {{ text_color }}; --star-size: {{ star_size }}px;">
-    <div class="star-rating-display__stars">
-      {% for i in (1..5) %}
-        {% if i <= avg_floor %}
-          <span class="star star--filled">★</span>
-        {% elsif i == avg_ceil and avg_floor != avg_ceil %}
-          <span class="star star--half">★</span>
-        {% else %}
-          <span class="star star--empty">★</span>
-        {% endif %}
-      {% endfor %}
-    </div>
-    {% if show_count %}
-      <span class="star-rating-count">
-        {{ avg_rounded }} ({{ count }} {{ count | pluralize: 'rating', 'ratings' }})
-      </span>
-    {% endif %}
-  </div>
+{% comment %} Use the manually picked product if set, otherwise fall back to the contextual product object {% endcomment %}
+{% if block.settings.product != blank %}
+  {% assign rating_product = block.settings.product %}
 {% else %}
-  <div class="star-rating-display" style="--star-color: {{ star_color }}; --text-color: {{ text_color }}; --star-size: {{ star_size }}px;">
-    <div class="star-rating-display__stars">
-      {% for i in (1..5) %}
-        <span class="star star--empty">★</span>
-      {% endfor %}
-    </div>
-    {% if show_count %}
-      <span class="star-rating-count">No ratings yet</span>
-    {% endif %}
-  </div>
+  {% assign rating_product = product %}
 {% endif %}
+
+{% assign avg = rating_product.metafields.star_rating.avg_rating.value | plus: 0.0 %}
+{% assign count = rating_product.metafields.star_rating.rating_count.value | plus: 0 %}
+{% assign avg_rounded = avg | round: 1 %}
+{% comment %} Compute fill percentage per star (0–100) for precise partial fills {% endcomment %}
+
+<div class="sr-display" style="--sr-color: {{ star_color }}; --sr-empty: #d4d4d8; --sr-text: {{ text_color }}; --sr-size: {{ star_size }}px;" role="img" aria-label="{{ avg_rounded }} out of 5 stars based on {{ count }} {{ count | pluralize: 'rating', 'ratings' }}">
+  <div class="sr-display__stars">
+    {%- for i in (1..5) -%}
+      {%- assign fill = avg | minus: i | plus: 1 -%}
+      {%- if fill >= 1 -%}
+        {%- assign pct = 100 -%}
+      {%- elsif fill > 0 -%}
+        {%- assign pct = fill | times: 100 | round: 0 -%}
+      {%- else -%}
+        {%- assign pct = 0 -%}
+      {%- endif -%}
+      <svg class="sr-star" viewBox="0 0 24 24" width="var(--sr-size, 20)" height="var(--sr-size, 20)" aria-hidden="true">
+        <defs>
+          <linearGradient id="sr-grad-{{ block.id }}-{{ i }}">
+            <stop offset="{{ pct }}%" stop-color="var(--sr-color, #FFD700)" />
+            <stop offset="{{ pct }}%" stop-color="var(--sr-empty, #d4d4d8)" />
+          </linearGradient>
+        </defs>
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z"
+              fill="url(#sr-grad-{{ block.id }}-{{ i }})"
+              stroke="none" />
+      </svg>
+    {%- endfor -%}
+  </div>
+
+  {% if show_count %}
+    <div class="sr-display__meta">
+      {% if avg > 0 %}
+        <span class="sr-display__score">{{ avg_rounded }}</span>
+        <span class="sr-display__sep">&middot;</span>
+        <span class="sr-display__count">{{ count }} {{ count | pluralize: 'review', 'reviews' }}</span>
+      {% else %}
+        <span class="sr-display__count sr-display__count--empty">No reviews yet</span>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
 
 {% schema %}
 {
@@ -48,6 +59,11 @@
   "target": "section",
   "stylesheet": "star-rating.css",
   "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product"
+    },
     {
       "type": "color",
       "id": "star_color",
