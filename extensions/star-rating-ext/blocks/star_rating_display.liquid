@@ -15,7 +15,7 @@
 {% assign avg_rounded = avg | round: 1 %}
 {% comment %} Compute fill percentage per star (0–100) for precise partial fills {% endcomment %}
 
-<div class="sr-display" style="--sr-color: {{ star_color }}; --sr-empty: #d4d4d8; --sr-text: {{ text_color }}; --sr-size: {{ star_size }}px;" role="img" aria-label="{{ avg_rounded }} out of 5 stars based on {{ count }} {{ count | pluralize: 'rating', 'ratings' }}">
+<div class="sr-display" data-product-id="{{ rating_product.id | split: '/' | last }}" style="--sr-color: {{ star_color }}; --sr-empty: #d4d4d8; --sr-text: {{ text_color }}; --sr-size: {{ star_size }}px;" role="img" aria-label="{{ avg_rounded }} out of 5 stars based on {{ count }} {{ count | pluralize: 'rating', 'ratings' }}">
   <div class="sr-display__stars">
     {%- for i in (1..5) -%}
       {%- assign fill = avg | minus: i | plus: 1 -%}

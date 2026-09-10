@@ -104,8 +104,8 @@
                 "success"
               );
 
-              // Update any display blocks on the same page
-              updateDisplayBlocks(data.average, data.count);
+              // Update all display blocks for this product (PDP + product grid cards)
+              updateDisplayBlocks(productId, data.average, data.count);
             } else {
               showMessage(data.error || "Failed to submit rating.", "error");
             }
@@ -135,8 +135,12 @@
     });
   }
 
-  function updateDisplayBlocks(average, count) {
-    var displays = document.querySelectorAll(".sr-display");
+  function updateDisplayBlocks(productId, average, count) {
+    // Find all display blocks matching this product ID (PDP block + any product grid cards)
+    var selector = productId
+      ? '.sr-display[data-product-id="' + productId + '"]'
+      : ".sr-display";
+    var displays = document.querySelectorAll(selector);
     displays.forEach(function (display) {
       // Update SVG gradient stops for each star
       var starSvgs = display.querySelectorAll(".sr-star");
