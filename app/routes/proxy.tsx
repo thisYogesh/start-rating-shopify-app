@@ -1,6 +1,10 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import { getDb } from "../db.server";
+import {
+  METAFIELD_NAMESPACE,
+  METAFIELD_KEYS,
+} from "../metafields.server";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -110,6 +114,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             metafields {
               id
               key
+              namespace
               value
             }
             userErrors {
@@ -123,15 +128,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         variables: {
           metafields: [
             {
-              namespace: "star_rating",
-              key: "avg_rating",
+              namespace: METAFIELD_NAMESPACE,
+              key: METAFIELD_KEYS.AVG_RATING,
               ownerId,
               type: "number_decimal",
               value: average.toFixed(1),
             },
             {
-              namespace: "star_rating",
-              key: "rating_count",
+              namespace: METAFIELD_NAMESPACE,
+              key: METAFIELD_KEYS.RATING_COUNT,
               ownerId,
               type: "number_integer",
               value: String(count),
@@ -141,13 +146,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     );
 
-    const responseJson = await response.json();
-    const userErrors = responseJson.data?.metafieldsSet?.userErrors;
+    const responseJson: any = await response.json();
 
-    if (userErrors && userErrors.length > 0) {
-      console.error("metafieldsSet errors:", userErrors);
+    // Check for top-level GraphQL errors (e.g. auth, invalid query)
+    if (responseJson.errors && responseJson.errors.length > 0) {
+      console.error("metafieldsSet top-level errors:", responseJson.errors);
       return new Response(
-        JSON.stringify({ error: "Failed to update product rating" }),
+        JSON.stringify({ error: responseJson.errors[0].message }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
+
+    const userErrors = responseJson.data?.metafieldsSet?.userErrors;
+    if (userErrors && userErrors.length > 0) {
+      console.error("metafieldsSet userErrors:", userErrors);
+      return new Response(
+        JSON.stringify({ error: userErrors[0].message }),
         {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },

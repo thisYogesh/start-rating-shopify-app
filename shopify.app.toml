@@ -9,23 +9,6 @@ name = "star-rating"
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products"
 
-[product.metafields.app.avg_rating]
-type = "number_decimal"
-name = "Average Star Rating"
-description = "The average star rating for this product"
-
-  [product.metafields.app.avg_rating.access]
-  admin = "merchant_read_write"
-  storefront = "public_read"
-
-[product.metafields.app.rating_count]
-type = "number_integer"
-name = "Rating Count"
-description = "The total number of ratings for this product"
-
-  [product.metafields.app.rating_count.access]
-  admin = "merchant_read_write"
-  storefront = "public_read"
 
 [app_proxy]
 url = "https://star-rating.star-rating.workers.dev/proxy"

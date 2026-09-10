@@ -1,9 +1,11 @@
-{% assign avg = product.metafields.app.avg_rating.value | plus: 0.0 %}
-{% assign count = product.metafields.app.rating_count.value | plus: 0 %}
 {% assign star_color = block.settings.star_color %}
 {% assign text_color = block.settings.text_color %}
 {% assign show_count = block.settings.show_count %}
 {% assign star_size = block.settings.star_size %}
+
+<!-- DEBUG star-rating: product_id={{ product.id | default: "nil" }} avg_raw={{ product.metafields.star_rating.avg_rating.value | default: "nil" }} count_raw={{ product.metafields.star_rating.rating_count.value | default: "nil" }} -->
+{% assign avg = product.metafields.star_rating.avg_rating.value | plus: 0.0 %}
+{% assign count = product.metafields.star_rating.rating_count.value | plus: 0 %}
 {% assign avg_floor = avg | floor %}
 {% assign avg_ceil = avg | ceil %}
 {% assign avg_rounded = avg | round: 1 %}

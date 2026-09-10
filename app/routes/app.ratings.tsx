@@ -9,6 +9,11 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { getDb } from "../db.server";
+import {
+  METAFIELD_NAMESPACE,
+  METAFIELD_KEYS,
+  ensureMetafieldDefinitions,
+} from "../metafields.server";
 
 interface ProductNode {
   id: string;
@@ -24,18 +29,21 @@ interface LoaderData {
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
 
+  // Ensure metafield definitions exist (once per worker lifetime)
+  await ensureMetafieldDefinitions(admin);
+
   const response = await admin.graphql(
     `#graphql
-      query getProducts {
+      query getProducts($ns: String!) {
         products(first: 50) {
           edges {
             node {
               id
               title
-              avgRating: metafield(namespace: "star_rating", key: "avg_rating") {
+              avgRating: metafield(namespace: $ns, key: "avg_rating") {
                 value
               }
-              ratingCount: metafield(namespace: "star_rating", key: "rating_count") {
+              ratingCount: metafield(namespace: $ns, key: "rating_count") {
                 value
               }
             }
@@ -43,6 +51,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       }
     `,
+    { variables: { ns: METAFIELD_NAMESPACE } },
   );
 
   const responseJson = await response.json();
@@ -108,6 +117,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             metafields {
               id
               key
+              namespace
               value
             }
             userErrors {
@@ -121,15 +131,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         variables: {
           metafields: [
             {
-              namespace: "star_rating",
-              key: "avg_rating",
+              namespace: METAFIELD_NAMESPACE,
+              key: METAFIELD_KEYS.AVG_RATING,
               ownerId: productId,
               type: "number_decimal",
               value: avgRating.toFixed(1),
             },
             {
-              namespace: "star_rating",
-              key: "rating_count",
+              namespace: METAFIELD_NAMESPACE,
+              key: METAFIELD_KEYS.RATING_COUNT,
               ownerId: productId,
               type: "number_integer",
               value: String(ratingCount),
@@ -139,11 +149,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     );
 
-    const responseJson = await response.json();
-    const userErrors = responseJson.data?.metafieldsSet?.userErrors;
+    const responseJson: any = await response.json();
 
+    // Check for top-level GraphQL errors (e.g. auth, invalid query)
+    if (responseJson.errors && responseJson.errors.length > 0) {
+      console.error("metafieldsSet top-level errors:", responseJson.errors);
+      return { error: responseJson.errors[0].message };
+    }
+
+    const userErrors = responseJson.data?.metafieldsSet?.userErrors;
     if (userErrors && userErrors.length > 0) {
+      console.error("metafieldsSet userErrors:", userErrors);
       return { error: userErrors[0].message };
+    }
+
+    if (!responseJson.data?.metafieldsSet?.metafields?.length) {
+      console.error("metafieldsSet returned no metafields:", responseJson);
+      return { error: "Metafields were not created — check server logs." };
     }
 
     return { success: true };
@@ -214,9 +236,19 @@ export default function RatingsPage() {
   const [selectedRatings, setSelectedRatings] = useState<
     Record<string, number>
   >({});
+  const [submittingProductId, setSubmittingProductId] = useState<string | null>(
+    null,
+  );
 
   const isSubmitting =
     fetcher.state === "submitting" || fetcher.state === "loading";
+
+  // Clear the tracked product once the fetcher is idle again
+  useEffect(() => {
+    if (!isSubmitting) {
+      setSubmittingProductId(null);
+    }
+  }, [isSubmitting]);
 
   useEffect(() => {
     if (fetcher.data && "success" in fetcher.data && fetcher.data.success) {
@@ -257,6 +289,7 @@ export default function RatingsPage() {
     const rating = selectedRatings[productId];
     if (!rating) return;
 
+    setSubmittingProductId(productId);
     fetcher.submit(
       {
         _action: "updateRating",
@@ -318,8 +351,12 @@ export default function RatingsPage() {
                       <s-button
                         variant="primary"
                         onClick={() => handleSubmitRating(product.id)}
-                        {...(isSubmitting ? { loading: true } : {})}
-                        {...(selectedRating === 0 ? { disabled: true } : {})}
+                        {...(isSubmitting && submittingProductId === product.id
+                          ? { loading: true }
+                          : {})}
+                        {...(selectedRating === 0 || isSubmitting
+                          ? { disabled: true }
+                          : {})}
                       >
                         Save
                       </s-button>
