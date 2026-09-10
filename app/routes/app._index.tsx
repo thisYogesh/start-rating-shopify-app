@@ -101,7 +101,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return {
         productTitle: product?.title ?? `Product #${r.productId}`,
         rating: r.rating,
-        date: r.createdAt,
+        date: r.createdAt.endsWith("Z") ? r.createdAt : r.createdAt + "Z",
       };
     });
   } catch {
