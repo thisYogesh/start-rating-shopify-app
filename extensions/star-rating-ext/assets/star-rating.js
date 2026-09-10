@@ -136,31 +136,71 @@
   }
 
   function updateDisplayBlocks(average, count) {
-    var displays = document.querySelectorAll(".star-rating-display");
+    var displays = document.querySelectorAll(".sr-display");
     displays.forEach(function (display) {
-      var starsContainer = display.querySelector(".star-rating-display__stars");
-      if (starsContainer) {
-        var starEls = starsContainer.querySelectorAll(".star");
-        starEls.forEach(function (star, index) {
-          star.classList.remove("star--filled", "star--half", "star--empty");
-          if (index + 1 <= Math.round(average)) {
-            star.classList.add("star--filled");
-          } else {
-            star.classList.add("star--empty");
-          }
-        });
+      // Update SVG gradient stops for each star
+      var starSvgs = display.querySelectorAll(".sr-star");
+      starSvgs.forEach(function (svg, index) {
+        var i = index + 1;
+        var fill = average - i + 1;
+        var pct;
+        if (fill >= 1) {
+          pct = 100;
+        } else if (fill > 0) {
+          pct = Math.round(fill * 100);
+        } else {
+          pct = 0;
+        }
+        // Update both stops in the linearGradient
+        var stops = svg.querySelectorAll("linearGradient stop");
+        if (stops.length >= 2) {
+          stops[0].setAttribute("offset", pct + "%");
+          stops[1].setAttribute("offset", pct + "%");
+        }
+      });
+
+      // Update the score text
+      var scoreEl = display.querySelector(".sr-display__score");
+      if (scoreEl) {
+        scoreEl.textContent = average.toFixed(1);
       }
 
-      var countEl = display.querySelector(".star-rating-count");
+      // Update the count text
+      var countEl = display.querySelector(".sr-display__count");
       if (countEl) {
-        countEl.textContent =
-          average.toFixed(1) +
-          " (" +
-          count +
-          " " +
-          (count === 1 ? "rating" : "ratings") +
-          ")";
+        if (average > 0) {
+          countEl.textContent = count + " " + (count === 1 ? "review" : "reviews");
+          countEl.classList.remove("sr-display__count--empty");
+        } else {
+          countEl.textContent = "No reviews yet";
+          countEl.classList.add("sr-display__count--empty");
+        }
       }
+
+      // If meta section was hidden because there were 0 ratings, show it now
+      var metaEl = display.querySelector(".sr-display__meta");
+      if (metaEl && average > 0) {
+        // Ensure score and separator exist (they may have been absent in the "no reviews" state)
+        if (!scoreEl) {
+          var sep = display.querySelector(".sr-display__sep");
+          if (!sep) {
+            var newScore = document.createElement("span");
+            newScore.className = "sr-display__score";
+            newScore.textContent = average.toFixed(1);
+            var newSep = document.createElement("span");
+            newSep.className = "sr-display__sep";
+            newSep.innerHTML = "&middot;";
+            metaEl.prepend(newSep);
+            metaEl.prepend(newScore);
+          }
+        }
+      }
+
+      // Update the aria-label on the container
+      display.setAttribute(
+        "aria-label",
+        average.toFixed(1) + " out of 5 stars based on " + count + " " + (count === 1 ? "rating" : "ratings")
+      );
     });
   }
 

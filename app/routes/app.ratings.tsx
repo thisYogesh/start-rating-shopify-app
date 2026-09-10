@@ -103,12 +103,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const db = getDb();
     const numericId = productId.replace("gid://shopify/Product/", "");
 
+    // Delete ALL existing ratings for this product (full reset)
+    await db
+      .prepare(
+        `DELETE FROM "Rating" WHERE "shop" = ? AND "productId" = ?`,
+      )
+      .bind(session.shop, numericId)
+      .run();
+
+    // Insert a single admin rating as the new baseline
     await db
       .prepare(
         `INSERT INTO "Rating" ("id", "shop", "productId", "customerIdentifier", "rating", "createdAt", "updatedAt")
-         VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-         ON CONFLICT ("shop", "productId", "customerIdentifier")
-         DO UPDATE SET "rating" = excluded."rating", "updatedAt" = datetime('now')`,
+         VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       )
       .bind(
         crypto.randomUUID(),
@@ -119,18 +126,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       )
       .run();
 
-    const { results: ratings } = await db
-      .prepare(
-        'SELECT "rating" FROM "Rating" WHERE "shop" = ? AND "productId" = ?',
-      )
-      .bind(session.shop, numericId)
-      .all<{ rating: number }>();
-
-    const ratingCount = ratings.length;
-    const avgRating =
-      ratingCount > 0
-        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratingCount
-        : newRating;
+    const ratingCount = 1;
+    const avgRating = newRating;
 
     const gqlResponse = await admin.graphql(
       `#graphql
@@ -494,7 +491,7 @@ function ProductCard({
             whiteSpace: "nowrap",
           }}
         >
-          Set rating:
+          Reset rating:
         </span>
         <StarPicker value={selectedRating} onChange={onSelectRating} />
         <s-button
@@ -503,7 +500,7 @@ function ProductCard({
           {...(isSubmitting ? { loading: true } : {})}
           {...(selectedRating === 0 || isSubmitting ? { disabled: true } : {})}
         >
-          Save Rating
+          Reset Rating
         </s-button>
       </div>
     </div>
